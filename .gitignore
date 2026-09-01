@@ -1,0 +1,8 @@
+# Local OmniRoute clone (cloned by the user, not vendored here)
+/OmniRoute/
+
+# Real environment file — never commit secrets
+.env
+
+# OmniRoute runtime data volume
+/data/

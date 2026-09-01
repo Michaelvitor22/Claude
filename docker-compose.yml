@@ -1,0 +1,59 @@
+# ─────────────────────────────────────────────────────────────────
+#  OmniRoute — minimal local runner
+# ─────────────────────────────────────────────────────────────────
+#  This repo does not vendor OmniRoute's source. `build.context` below
+#  points at a sibling checkout of the upstream repo:
+#
+#    git clone https://github.com/diegosouzapw/OmniRoute.git
+#
+#  ...cloned next to this file, so the directory layout looks like:
+#
+#    your-project/
+#    ├── docker-compose.yml   (this file)
+#    ├── .env                 (copied from .env.example, filled in)
+#    └── OmniRoute/           (the upstream clone)
+#
+#  Then: docker compose up -d
+#
+#  This is a trimmed-down single-service version of upstream's own
+#  docker-compose.yml (which offers several profiles — web, cli, host,
+#  memory, bifrost, cliproxyapi). For anything beyond the base gateway,
+#  use their compose file directly instead of this one:
+#  https://github.com/diegosouzapw/OmniRoute/blob/main/docker-compose.yml
+# ─────────────────────────────────────────────────────────────────
+
+services:
+  redis:
+    image: docker.io/library/redis:8-alpine
+    container_name: omniroute-redis
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+    command: redis-server --save 60 1 --loglevel warning
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  omniroute:
+    build:
+      context: ./OmniRoute
+      target: runner-base
+    container_name: omniroute
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - DATA_DIR=/app/data
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+    ports:
+      - "${DASHBOARD_PORT:-20128}:${DASHBOARD_PORT:-20128}"
+      - "${API_PORT:-20129}:${API_PORT:-20129}"
+    volumes:
+      - ./data:/app/data
+
+volumes:
+  redis-data:
+    name: omniroute-redis-data
